@@ -1,0 +1,119 @@
+<!DOCTYPE html>
+<html lang="pt-br">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <meta name="theme-color" content="#2563eb">
+    <link rel="manifest" href="manifest.json">
+    <link rel="apple-touch-icon" href="icon-192.png">
+    <title>Gerenciador PWA</title>
+    <style>
+        :root { --primary: #2563eb; --bg: #f1f5f9; --mic-on: #ef4444; --mic-off: #9333ea; }
+        * { box-sizing: border-box; -webkit-tap-highlight-color: transparent; }
+        body { font-family: system-ui, sans-serif; background: var(--bg); margin: 0; height: 100vh; display: flex; flex-direction: column; overflow: hidden; }
+        .page { display: none; flex: 1; padding: 15px; overflow-y: auto; }
+        .active { display: block; }
+        .favorites-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(110px, 1fr)); gap: 10px; margin-bottom: 150px; }
+        .fav-button { padding: 20px 10px; background: white; border: 1px solid #cbd5e1; border-radius: 12px; cursor: pointer; font-weight: 600; box-shadow: 0 2px 4px rgba(0,0,0,0.05); }
+        .btn-voice { position: fixed; top: 20px; right: 20px; width: 60px; height: 60px; border-radius: 50%; background: var(--mic-off); color: white; border: none; z-index: 1000; box-shadow: 0 4px 10px rgba(0,0,0,0.2); }
+        .listening { background: var(--mic-on); animation: pulse 1.2s infinite; }
+        @keyframes pulse { 0%, 100% { transform: scale(1); } 50% { transform: scale(1.1); } }
+        #voice-display { position: fixed; bottom: 80px; left: 50%; transform: translateX(-50%); width: 90%; background: #1e293b; color: #22c55e; padding: 10px; border-radius: 8px; text-align: center; display: none; z-index: 90; font-family: monospace; }
+        footer { position: fixed; bottom: 0; width: 100%; background: white; padding: 15px; border-top: 1px solid #ddd; display: flex; justify-content: center; gap: 10px; }
+        .btn { padding: 12px 20px; border-radius: 50px; border: none; font-weight: bold; cursor: pointer; }
+        .btn-main { background: var(--primary); color: white; flex: 1; max-width: 200px; }
+        input { width: 100%; padding: 15px; margin-bottom: 10px; border: 1px solid #ccc; border-radius: 8px; }
+        #toast { visibility: hidden; position: fixed; bottom: 130px; left: 50%; transform: translateX(-50%); background: #333; color: white; padding: 10px 20px; border-radius: 20px; }
+        #toast.show { visibility: visible; }
+    </style>
+</head>
+<body>
+    <button class="btn-voice" id="v-btn" onclick="toggleVoz()">🎤<br><small id="v-status">OFF</small></button>
+    <div id="voice-display"></div>
+
+    <div id="p1" class="page active">
+        <h2 style="text-align:center">Página 1</h2>
+        <div id="grid" class="favorites-grid"></div>
+    </div>
+
+    <div id="p2" class="page">
+        <h2 style="text-align:center">Configurações</h2>
+        <input type="text" id="url-in" placeholder="URL do site">
+        <button onclick="salvar()" class="btn btn-main" style="width:100%; max-width:none">Favoritar</button>
+    </div>
+
+    <footer>
+        <button id="prev" class="btn" onclick="navegar(-1)" style="visibility:hidden">Anterior</button>
+        <button id="main-btn" class="btn btn-main" onclick="irConfig()">Adicionar Favoritos</button>
+        <button id="next" class="btn" onclick="navegar(1)" style="visibility:hidden">Próximo</button>
+    </footer>
+
+    <div id="toast"></div>
+
+    <script>
+        let favs = JSON.parse(localStorage.getItem('favs')) || [];
+        let pg = 0;
+        let isRec = false;
+        let rec;
+
+        if ('SpeechRecognition' in window || 'webkitSpeechRecognition' in window) {
+            rec = new (window.SpeechRecognition || window.webkitSpeechRecognition)();
+            rec.lang = 'pt-BR'; rec.continuous = true; rec.interimResults = true;
+            rec.onresult = (e) => {
+                let text = Array.from(e.results).map(r => r[0].transcript).join('').toLowerCase();
+                document.getElementById('voice-display').innerText = "> " + text;
+                let cmd = text.split(' ').pop();
+                let f = favs.find(x => x.nome.toLowerCase() === cmd);
+                if(f) { window.open(f.url, '_blank'); toggleVoz(); }
+            };
+        }
+
+        function toggleVoz() {
+            isRec = !isRec;
+            const disp = document.getElementById('voice-display');
+            if(isRec) { 
+                rec.start(); disp.style.display = 'block'; 
+                document.getElementById('v-btn').classList.add('listening');
+                document.getElementById('v-status').innerText = "ON";
+            } else { 
+                rec.stop(); disp.style.display = 'none';
+                document.getElementById('v-btn').classList.remove('listening');
+                document.getElementById('v-status').innerText = "OFF";
+            }
+        }
+
+        function irConfig() {
+            document.getElementById('p1').classList.toggle('active');
+            document.getElementById('p2').classList.toggle('active');
+            render();
+        }
+
+        function salvar() {
+            let n = prompt("Nome do botão:");
+            if(n) {
+                favs.push({nome: n, url: document.getElementById('url-in').value});
+                localStorage.setItem('favs', JSON.stringify(favs));
+                irConfig();
+            }
+        }
+
+        function render() {
+            const g = document.getElementById('grid'); g.innerHTML = "";
+            favs.slice(pg*25, (pg+25)).forEach((f, i) => {
+                let b = document.createElement('button'); b.className = 'fav-button';
+                b.innerText = f.nome; b.onclick = () => window.open(f.url, '_blank');
+                g.appendChild(b);
+            });
+            document.getElementById('next').style.visibility = favs.length > (pg+1)*25 ? 'visible' : 'hidden';
+            document.getElementById('prev').style.visibility = pg > 0 ? 'visible' : 'hidden';
+        }
+
+        function navegar(d) { pg += d; render(); }
+
+        if ('serviceWorker' in navigator) {
+            navigator.serviceWorker.register('sw.js');
+        }
+        render();
+    </script>
+</body>
+</html>

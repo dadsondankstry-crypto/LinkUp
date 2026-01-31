@@ -6,46 +6,133 @@
     <meta name="theme-color" content="#2563eb">
     <link rel="manifest" href="manifest.json">
     <link rel="apple-touch-icon" href="icon-192.png">
-    <title>Gerenciador PWA</title>
+    <title>LinkUp - Favoritos</title>
     <style>
-        :root { --primary: #2563eb; --bg: #f1f5f9; --mic-on: #ef4444; --mic-off: #9333ea; }
+        :root { 
+            --primary: #2563eb; 
+            --bg: #f8fafc; 
+            --mic-on: #ef4444; 
+            --mic-off: #2563eb;
+            --danger: #dc2626;
+            --text: #1e293b;
+        }
+
         * { box-sizing: border-box; -webkit-tap-highlight-color: transparent; }
-        body { font-family: system-ui, sans-serif; background: var(--bg); margin: 0; height: 100vh; display: flex; flex-direction: column; overflow: hidden; }
-        .page { display: none; flex: 1; padding: 15px; overflow-y: auto; }
+
+        body { 
+            font-family: 'Segoe UI', system-ui, sans-serif; 
+            background: var(--bg); 
+            margin: 0; 
+            height: 100vh; 
+            display: flex; 
+            flex-direction: column; 
+            overflow: hidden; 
+            color: var(--text);
+        }
+
+        header { padding: 15px; text-align: center; background: white; border-bottom: 1px solid #f1f5f9; }
+        .logo { font-size: 22px; font-weight: 800; color: var(--primary); letter-spacing: -1px; }
+
+        .page { display: none; flex: 1; padding: 20px; overflow-y: auto; }
         .active { display: block; }
-        .favorites-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(110px, 1fr)); gap: 10px; margin-bottom: 150px; }
-        .fav-button { padding: 20px 10px; background: white; border: 1px solid #cbd5e1; border-radius: 12px; cursor: pointer; font-weight: 600; box-shadow: 0 2px 4px rgba(0,0,0,0.05); }
-        .btn-voice { position: fixed; top: 20px; right: 20px; width: 60px; height: 60px; border-radius: 50%; background: var(--mic-off); color: white; border: none; z-index: 1000; box-shadow: 0 4px 10px rgba(0,0,0,0.2); }
-        .listening { background: var(--mic-on); animation: pulse 1.2s infinite; }
-        @keyframes pulse { 0%, 100% { transform: scale(1); } 50% { transform: scale(1.1); } }
-        #voice-display { position: fixed; bottom: 80px; left: 50%; transform: translateX(-50%); width: 90%; background: #1e293b; color: #22c55e; padding: 10px; border-radius: 8px; text-align: center; display: none; z-index: 90; font-family: monospace; }
-        footer { position: fixed; bottom: 0; width: 100%; background: white; padding: 15px; border-top: 1px solid #ddd; display: flex; justify-content: center; gap: 10px; }
-        .btn { padding: 12px 20px; border-radius: 50px; border: none; font-weight: bold; cursor: pointer; }
+
+        .favorites-grid { 
+            display: grid; 
+            grid-template-columns: repeat(auto-fill, minmax(110px, 1fr)); 
+            gap: 12px; 
+            margin-bottom: 160px; 
+            max-width: 800px;
+            margin-left: auto;
+            margin-right: auto;
+        }
+
+        .fav-button { 
+            padding: 22px 10px; 
+            background: white; 
+            border: 1px solid #e2e8f0; 
+            border-radius: 14px; 
+            cursor: pointer; 
+            font-weight: 600; 
+            transition: all 0.2s;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.04);
+            font-size: 13px;
+            user-select: none;
+        }
+
+        .fav-button:active { transform: scale(0.95); background: #f1f5f9; }
+
+        .btn-voice { 
+            position: fixed; top: 12px; right: 15px; width: 50px; height: 50px; 
+            border-radius: 50%; background: var(--mic-off); color: white; border: none; 
+            z-index: 1000; display: flex; align-items: center; justify-content: center;
+        }
+
+        .listening { background: var(--mic-on); animation: pulse 1.5s infinite; }
+        @keyframes pulse { 0% { box-shadow: 0 0 0 0 rgba(239, 68, 68, 0.4); } 70% { box-shadow: 0 0 0 10px rgba(239, 68, 68, 0); } 100% { box-shadow: 0 0 0 0 rgba(239, 68, 68, 0); } }
+
+        #voice-display { 
+            position: fixed; bottom: 90px; left: 50%; transform: translateX(-50%); width: 85%; 
+            background: #1e293b; color: #4ade80; padding: 10px; border-radius: 10px; 
+            text-align: center; display: none; z-index: 90; font-family: monospace;
+        }
+
+        footer { 
+            position: fixed; bottom: 0; width: 100%; background: white; 
+            padding: 15px; border-top: 1px solid #f1f5f9; 
+            display: flex; justify-content: center; gap: 10px; z-index: 100;
+        }
+
+        .btn { padding: 12px 20px; border-radius: 10px; border: none; font-weight: 700; cursor: pointer; font-size: 14px; }
         .btn-main { background: var(--primary); color: white; flex: 1; max-width: 200px; }
-        input { width: 100%; padding: 15px; margin-bottom: 10px; border: 1px solid #ccc; border-radius: 8px; }
-        #toast { visibility: hidden; position: fixed; bottom: 130px; left: 50%; transform: translateX(-50%); background: #333; color: white; padding: 10px 20px; border-radius: 20px; }
+        .btn-secondary { background: #f1f5f9; color: var(--text); }
+        .btn-danger { background: #fee2e2; color: var(--danger); font-size: 11px; margin-top: 15px; width: 100%; }
+
+        .backup-section { margin-top: 25px; padding-top: 15px; border-top: 1px dashed #cbd5e1; }
+        .btn-backup { background: #e2e8f0; color: #475569; font-size: 11px; padding: 8px; flex: 1; border-radius: 8px; border:none; cursor: pointer; }
+
+        input { width: 100%; padding: 14px; margin-bottom: 12px; border: 1px solid #e2e8f0; border-radius: 10px; font-size: 16px; }
+
+        #toast { 
+            visibility: hidden; position: fixed; bottom: 140px; left: 50%; 
+            transform: translateX(-50%); background: #1e293b; color: white; 
+            padding: 8px 20px; border-radius: 50px; font-size: 13px; z-index: 3000;
+        }
         #toast.show { visibility: visible; }
     </style>
 </head>
 <body>
-    <button class="btn-voice" id="v-btn" onclick="toggleVoz()">🎤<br><small id="v-status">OFF</small></button>
-    <div id="voice-display"></div>
+    <header><div class="logo">LinkUp</div></header>
+
+    <button class="btn-voice" id="v-btn" onclick="toggleVoz()">🎤</button>
+    <div id="voice-display">Ouvindo...</div>
 
     <div id="p1" class="page active">
-        <h2 style="text-align:center">Página 1</h2>
+        <p style="text-align:center; font-size:10px; color:#94a3b8; margin-top:0;">Segure o botão para apagar</p>
         <div id="grid" class="favorites-grid"></div>
     </div>
 
     <div id="p2" class="page">
-        <h2 style="text-align:center">Configurações</h2>
-        <input type="text" id="url-in" placeholder="URL do site">
-        <button onclick="salvar()" class="btn btn-main" style="width:100%; max-width:none">Favoritar</button>
+        <h3 style="text-align:center">Novo Link</h3>
+        <input type="text" id="url-in" placeholder="URL (ex: google.com)">
+        <button onclick="salvar()" class="btn btn-main" style="width:100%; max-width:none">Salvar Favorito</button>
+        
+        <div class="backup-section">
+            <p style="font-size: 11px; color: #64748b; text-align: center;">Backup e Dados</p>
+            <div style="display: flex; gap: 8px;">
+                <button onclick="exportarBackup()" class="btn-backup">Exportar</button>
+                <button onclick="document.getElementById('file-in').click()" class="btn-backup">Importar</button>
+            </div>
+            <input type="file" id="file-in" style="display:none" accept=".json" onchange="importarBackup(event)">
+            <button onclick="limparTudo()" class="btn btn-danger">APAGAR TODOS OS FAVORITOS</button>
+        </div>
+
+        <button onclick="irConfig()" class="btn btn-secondary" style="width:100%; margin-top:20px">Voltar</button>
     </div>
 
     <footer>
-        <button id="prev" class="btn" onclick="navegar(-1)" style="visibility:hidden">Anterior</button>
-        <button id="main-btn" class="btn btn-main" onclick="irConfig()">Adicionar Favoritos</button>
-        <button id="next" class="btn" onclick="navegar(1)" style="visibility:hidden">Próximo</button>
+        <button id="prev" class="btn btn-secondary" onclick="navegar(-1)" style="visibility:hidden">←</button>
+        <button id="main-btn" class="btn btn-main" onclick="irConfig()">+ Adicionar</button>
+        <button id="next" class="btn btn-secondary" onclick="navegar(1)" style="visibility:hidden">→</button>
     </footer>
 
     <div id="toast"></div>
@@ -62,46 +149,88 @@
             rec.onresult = (e) => {
                 let text = Array.from(e.results).map(r => r[0].transcript).join('').toLowerCase();
                 document.getElementById('voice-display').innerText = "> " + text;
-                let cmd = text.split(' ').pop();
-                let f = favs.find(x => x.nome.toLowerCase() === cmd);
-                if(f) { window.open(f.url, '_blank'); toggleVoz(); }
+                let words = text.trim().split(' ');
+                let lastWord = words[words.length - 1];
+                let found = favs.find(x => x.nome.toLowerCase() === lastWord);
+                if(found) { window.open(found.url, '_blank'); toggleVoz(); }
             };
         }
 
         function toggleVoz() {
+            if(!rec) return showToast("Voz não suportada");
             isRec = !isRec;
-            const disp = document.getElementById('voice-display');
-            if(isRec) { 
-                rec.start(); disp.style.display = 'block'; 
-                document.getElementById('v-btn').classList.add('listening');
-                document.getElementById('v-status').innerText = "ON";
-            } else { 
-                rec.stop(); disp.style.display = 'none';
-                document.getElementById('v-btn').classList.remove('listening');
-                document.getElementById('v-status').innerText = "OFF";
-            }
+            document.getElementById('voice-display').style.display = isRec ? 'block' : 'none';
+            document.getElementById('v-btn').classList.toggle('listening', isRec);
+            isRec ? rec.start() : rec.stop();
         }
 
         function irConfig() {
             document.getElementById('p1').classList.toggle('active');
             document.getElementById('p2').classList.toggle('active');
+            document.getElementById('main-btn').style.display = document.getElementById('p2').classList.contains('active') ? 'none' : 'block';
             render();
         }
 
         function salvar() {
-            let n = prompt("Nome do botão:");
+            let url = document.getElementById('url-in').value;
+            if(!url) return;
+            if (!url.startsWith('http')) url = 'https://' + url;
+            let n = prompt("Nome do comando de voz:");
             if(n) {
-                favs.push({nome: n, url: document.getElementById('url-in').value});
+                favs.push({nome: n.trim(), url: url});
+                localStorage.setItem('favs', JSON.stringify(favs));
+                document.getElementById('url-in').value = "";
+                irConfig();
+            }
+        }
+
+        function exportarBackup() {
+            const blob = new Blob([JSON.stringify(favs)], {type: 'application/json'});
+            const a = document.createElement('a');
+            a.href = URL.createObjectURL(blob);
+            a.download = 'linkup_backup.json';
+            a.click();
+        }
+
+        function importarBackup(e) {
+            const reader = new FileReader();
+            reader.onload = (ev) => {
+                favs = [...favs, ...JSON.parse(ev.target.result)];
+                localStorage.setItem('favs', JSON.stringify(favs));
+                render();
+                showToast("Backup Restaurado!");
+            };
+            reader.readAsText(e.target.files[0]);
+        }
+
+        function limparTudo() {
+            if(confirm("ATENÇÃO: Isso apagará TODOS os seus links. Tem certeza?")) {
+                favs = [];
                 localStorage.setItem('favs', JSON.stringify(favs));
                 irConfig();
+                showToast("Tudo apagado!");
             }
         }
 
         function render() {
             const g = document.getElementById('grid'); g.innerHTML = "";
-            favs.slice(pg*25, (pg+25)).forEach((f, i) => {
-                let b = document.createElement('button'); b.className = 'fav-button';
-                b.innerText = f.nome; b.onclick = () => window.open(f.url, '_blank');
+            const start = pg * 25;
+            favs.slice(start, start + 25).forEach((f, i) => {
+                let b = document.createElement('button');
+                b.className = 'fav-button'; b.innerText = f.nome;
+                b.onclick = () => window.open(f.url, '_blank');
+                
+                let timer;
+                const startDel = () => timer = setTimeout(() => {
+                    if(confirm(`Apagar "${f.nome}"?`)) {
+                        favs.splice(start + i, 1);
+                        localStorage.setItem('favs', JSON.stringify(favs));
+                        render();
+                    }
+                }, 800);
+                b.onmousedown = b.ontouchstart = startDel;
+                b.onmouseup = b.ontouchend = () => clearTimeout(timer);
+                
                 g.appendChild(b);
             });
             document.getElementById('next').style.visibility = favs.length > (pg+1)*25 ? 'visible' : 'hidden';
@@ -109,10 +238,12 @@
         }
 
         function navegar(d) { pg += d; render(); }
-
-        if ('serviceWorker' in navigator) {
-            navigator.serviceWorker.register('sw.js');
+        function showToast(m) {
+            const t = document.getElementById('toast');
+            t.innerText = m; t.classList.add('show');
+            setTimeout(() => t.classList.remove('show'), 2000);
         }
+
         render();
     </script>
 </body>
